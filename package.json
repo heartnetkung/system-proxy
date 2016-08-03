@@ -1,0 +1,25 @@
+{
+  "name": "system-proxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node node_modules/jasmine-node/lib/jasmine-node/cli.js ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heartnetkung/system-proxy.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/heartnetkung/system-proxy/issues"
+  },
+  "homepage": "https://github.com/heartnetkung/system-proxy#readme",
+  "devDependencies": {
+    "jasmine-node": "^1.14.5"
+  },
+  "dependencies": {
+    "winreg": "^1.2.1"
+  }
+}
