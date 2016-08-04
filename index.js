@@ -4,33 +4,34 @@ var Registry = require('winreg');
 
 
 var noop = function() {};
-var regKey = new Registry({
-	hive: Registry.HKCU,
-	key: '\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'
-});
 exports.proxyEnabled = false;
 exports.proxyServer = null;
 
 
-if (process.platform !== 'win32')
-	throw new Error('Only Windows is supported: ', process.platform);
-
-
 exports.showSystemSettingUi = function(callback) {
 	callback = callback || noop;
+	if (process.platform !== 'win32')
+		return callback(new Error('Only Windows is supported: ', process.platform));
 	exec('inetcpl.cpl ,4', function(err) {
-		callback(err);
+		//the command is always error since it's a GUI application
+		callback();
 	});
 };
 
 
 exports.getProxySettings = function(callback) {
 	callback = callback || noop;
+	if (process.platform !== 'win32')
+		return callback(new Error('Only Windows is supported: ', process.platform));
 	var ans = {
 		proxyEnabled: false,
 		proxyServer: null
 	};
 	var warning = [];
+	var regKey = new Registry({
+		hive: Registry.HKCU,
+		key: '\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'
+	});
 	regKey.values(function(err, items) {
 		if (err) return callback(err);
 		for (var i = 0; i < items.length; i++) {
@@ -67,15 +68,13 @@ exports.getProxySettings = function(callback) {
 exports.urlToConnection = function(url) {
 	if (!exports.proxyEnabled || !exports.proxyServer)
 		return url;
-	var proxyUrl = parse(exports.proxyServer);
+	var proxyUrl = parse('http://' + exports.proxyServer.replace(/^[^:]+:\/\//, ''));
+	if (!proxyUrl.hostname || !proxyUrl.port)
+		return url;
 	var destination = parse(url);
-	if (!proxyUrl.hostname)
-		proxyUrl = parse('http://' + exports.proxyServer);
-	if (!destination.host)
-		throw new Error();
 	return {
 		hostname: proxyUrl.hostname,
-		port: parseInt(proxyUrl.port || '8080'),
+		port: parseInt(proxyUrl.port),
 		path: url,
 		headers: {
 			Host: destination.host
@@ -84,9 +83,13 @@ exports.urlToConnection = function(url) {
 };
 
 
-//set proxy variables
-exports.getProxySettings(function(err, ans, warning) {
-	if (err) return console.log('Warning proxy registry reading fails: ', err);
-	exports.proxyEnabled = ans.proxyEnabled;
-	exports.proxyServer = ans.proxyServer;
-});
+//initially setting proxy from system
+exports.init = function(callback) {
+	callback = callback || noop;
+	exports.getProxySettings(function(err, ans, warning) {
+		if (err) return callback(new Error('Warning proxy registry reading fails: ' + (err && err.message)));
+		exports.proxyEnabled = ans.proxyEnabled;
+		exports.proxyServer = ans.proxyServer;
+		callback();
+	});
+};
